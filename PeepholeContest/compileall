@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export CLASSPATH=$(pwd)/jooslib.jar
+for d in PeepholeBenchmarks/* ; do
+    (cd $d ; make)
+done
