@@ -99,8 +99,6 @@ makeCODElabelF get_if_neg(CODE *c, int *label)
     return NULL;
 }
 
-
-
 /* astore_n
  * aload_n
  * -------->
@@ -524,6 +522,33 @@ int remove_iconst_ifeq(CODE **c) {
 }
 
 /*
+    aconst_null         aconst_null
+    if_acmpeq lbl       if_acmpne lbl
+    ----->              ----->
+    ifnull lbl          ifnonnull
+*/
+int remove_aconst_null_in_cmp(CODE **c) {
+    int l;
+
+    if (
+        is_aconst_null(*c) &&
+        is_if_acmpeq(next(*c), &l)
+    ) {
+        return replace(c, 2, makeCODEifnull(l, NULL));
+    }
+
+    if (
+        is_aconst_null(*c) &&
+        is_if_acmpne(next(*c), &l)
+    ) {
+        return replace(c, 2, makeCODEifnonnull(l, NULL));
+    }
+
+
+    return 0;
+}
+
+/*
 Flips conditions (integers and refs) in trivial goto cases.
     if_[cond] lbl1
     goto lbl2
@@ -682,7 +707,7 @@ OPTI optimization[] = {
     remove_iconst_ifeq,
     flip_cond,
     collapse_ldc_string,
-    nothing,
+    remove_aconst_null_in_cmp,
     nothing,
     nothing,
     nothing,
