@@ -405,9 +405,67 @@ int nothing(CODE **c) {
     return 0;
 }
 
+/* if_icmplt L
+ * goto M
+ * L: (L has only one reference)
+ * iconst_1
+ * N: (N is dead)
+ * ifeq O
+ * x
+ * ------------>
+ *  if_icmplt L
+ *  goto M
+ *  L:
+ *  x
+ */
+int if_icmplt_iconst_ifeq(CODE **c)
+{
+    int l1, l2, m, n, o, i;
+
+    int isreturn = 0;
+
+    if (
+            is_if_icmplt(*c, &l1) &&         /* if_icmplt L */
+            (
+             is_goto(next(*c), &m)
+             ||
+             (isreturn = is_return(next(*c)))
+            ) &&         /* goto M / return */
+            is_label(next(next(*c)), &l2) && /* L: */ l1 == l2 &&
+            uniquelabel(l1) &&
+            is_ldc_int(next(next(next(*c))), &i) && /* iconst_1 */
+            is_label(nextby(*c, 4), &n) && /* N: */
+            deadlabel(n) &&
+            is_ifeq(nextby(*c, 5), &o) /* ifeq O */
+    ) {
+        CODE *l = makeCODElabel(l1, NULL);
+
+        return
+            replace(c,
+                    6,
+                    makeCODEif_icmplt(
+                        l1,
+                        isreturn ?
+                        makeCODEreturn(
+                            l
+                        )
+                        :
+                        makeCODEgoto(
+                            m,
+                            l
+                        )
+                    )
+            );
+    }
+
+    return 0;
+}
+
 #define OPTS 100
 
 OPTI optimization[OPTS] = {
+    const_goto_ifeq,
+    if_icmplt_iconst_ifeq,
     simplify_multiplication_right,
     simplify_astore,
     simplify_istore,
@@ -415,14 +473,12 @@ OPTI optimization[OPTS] = {
     simplify_goto_goto,
     simplify_astore_aload,
     remove_nop,
-    const_goto_ifeq,
     remove_checkcast_on_null,
     simplify_putfield,
     goto_return,
     remove_nullcheck_const_str,
     remove_after_return,
     remove_dead_labels,
-    nothing,
     nothing,
     nothing,
     nothing,
