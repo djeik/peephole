@@ -2,3 +2,7 @@
 *.j
 *.dump
 *.o
+*.exe
+
+PeepholeContest/tmp1
+PeepholeContest/tmp2

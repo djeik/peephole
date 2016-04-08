@@ -1,6 +1,18 @@
 #!/bin/bash
 
-export CLASSPATH='-cygpath jooslib.jar'
-for d in PeepholeBenchmarks/* ; do
-    (cd $d ; make)
+set -e
+
+(cd JOOSA-src; make)
+
+JOOS=$PEEPDIR/joos
+
+for bench in $(find PeepholeBenchmarks -mindepth 1 -maxdepth 1 -type d) ; do
+    (
+    export CLASSPATH='-cygpath $(pwd)/jooslib.jar'
+    cd $bench
+    $JOOS $@ *.java $(if [ -n "$(find . -name '*.joos')" ] ; then
+        echo *.joos
+    fi)
+    echo 'compiled' $bench
+    )
 done

@@ -1,3 +1,10 @@
 #!/bin/bash
 
-java -classpath $PEEPDIR/tinapoc.jar:$PEEPDIR/bcel-5.1.jar dejasmin $@
+if [[ `uname` == "CYGWIN_NT-6.1-WOW" ]]
+then
+    SEP=';'
+else
+    SEP=:
+fi
+
+java -classpath $PEEPDIR/tinapoc.jar$SEP$PEEPDIR/bcel-5.1.jar dejasmin $@

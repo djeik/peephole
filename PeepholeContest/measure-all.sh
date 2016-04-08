@@ -2,7 +2,7 @@
 
 set -e
 
-for bench in $(find PeepholeBenchmarks -type d -depth 1) ; do
+for bench in $(find PeepholeBenchmarks -mindepth 1 -maxdepth 1 -type d) ; do
     (
     cd $bench
     for f in *.dump ; do
