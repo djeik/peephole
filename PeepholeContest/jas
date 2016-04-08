@@ -1,0 +1,2 @@
+#!/bin/bash
+java -classpath $JOOSDIR/tinapoc.jar:$JOOSDIR/bcel-5.1.jar jasmin $@
