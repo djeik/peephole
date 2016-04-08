@@ -4,6 +4,8 @@ set -e
 
 JOOS=$PEEPDIR/joos
 
+(cd JOOSA-src ; make)
+
 for bench in $(find PeepholeBenchmarks -type d -depth 1) ; do
     (
     export CLASSPATH=$(pwd)/jooslib.jar
