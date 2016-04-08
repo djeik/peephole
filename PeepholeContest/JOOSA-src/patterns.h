@@ -24,12 +24,24 @@ int simplify_astore_aload(CODE **c)
 {
     int n1, n2;
     if (
-            (
              is_astore(*c, &n1) &&
              is_aload(next(*c), &n2) &&
              n1 == n2
-            )
-            ||
+    ) {
+        return
+            replace(
+                c,
+                2,
+                makeCODEdup(
+                    makeCODEastore(
+                        n1,
+                        NULL
+                    )
+                )
+        );
+    }
+
+    if (
             (
              is_aload(*c, &n1) &&
              is_astore(next(*c), &n2) &&
