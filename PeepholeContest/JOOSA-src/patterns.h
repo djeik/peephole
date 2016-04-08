@@ -321,7 +321,7 @@ int remove_nullcheck_const_str(CODE **c) {
         lb == lbl_stop &&
         uniquelabel(lb)
     ) {
-        return replace(c, 8, makeCODEldc_string(s, NULL));
+        return replace_modified(c, 8, makeCODEldc_string(s, NULL));
     }
 
     return 0;
@@ -366,7 +366,12 @@ int remove_after_return(CODE **c) {
     return 0;
 }
 
-/* Removes any dead labels. */
+/*
+    Removes any dead labels.
+    This is not really an "optimization" by itself since it doesn't change the
+    size of the code, but removing dead labels may allow other patterns to
+    match.
+*/
 int remove_dead_labels(CODE **c) {
     int n;
     if (is_label(*c, &n) && deadlabel(n)) {
