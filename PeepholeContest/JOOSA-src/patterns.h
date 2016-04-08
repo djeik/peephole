@@ -406,6 +406,62 @@ int goto_return(CODE **c) {
     return 0;
 }
 
+/*
+    iconst [not 0]              iconst_0
+    ifeq l                      ifeq l
+    ---->                       ---->
+    [nothing] (drop on l)       goto l
+*/
+int remove_iconst_ifeq(CODE **c) {
+    int n;
+    int l;
+    if (is_ldc_int(*c, &n) && is_ifeq(next(*c), &l)) {
+        if (n == 0) {
+            return replace(c, 2, makeCODEgoto(l, NULL));
+        } else {
+            droplabel(l);
+            return replace(c, 2, NULL);
+        }
+    }
+
+    return 0;
+}
+
+/*
+Flips equality conditions in trivial goto cases.
+
+    if_acmpeq lbl1                  if_acmpne lbl1
+    goto lbl2                       goto lbl2
+    lbl1:                           lbl1:
+    --->                            --->
+    if_acmpne lbl2 (drop lbl1)      ifacmpeq lbl2 (drop lbl1)
+    lbl1:                           lbl1:
+*/
+int flip_eq(CODE **c) {
+    int l1, l2, lt, flg = 0;
+    if (is_if_acmpeq(*c, &l1))
+        flg = 1;
+    else if (is_if_acmpne(*c, &l1))
+        flg = 2;
+
+    if (
+        flg &&
+        is_goto(next(*c), &l2) &&
+        is_label(next(next(*c)), &lt) &&
+        l1 == lt
+    ) {
+        droplabel(l1);
+        if (flg == 1) {
+            return replace(c, 2, makeCODEif_acmpne(l2, NULL));
+        } else {
+            return replace(c, 2, makeCODEif_acmpeq(l2, NULL));
+        }
+    }
+
+    return 0;
+}
+
+
 int nothing(CODE **c) {
     return 0;
 }
@@ -583,7 +639,8 @@ OPTI optimization[] = {
     remove_after_return,
     remove_dead_labels,
     load_and_swap,
-    nothing,
+    remove_iconst_ifeq,
+    flip_eq,
     nothing,
     nothing,
     nothing,
