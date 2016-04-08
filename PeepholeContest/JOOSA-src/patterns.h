@@ -314,6 +314,45 @@ int remove_nullcheck_const_str(CODE **c) {
     return 0;
 }
 
+/*
+After a return, any instructions until a label can be safely removed.
+(A good compiler shouldn't generate that kind of stuff outright but our
+optimizations might cause it).
+    [/i/a]return
+    ...
+    label:
+    ---->
+    [/i/a]return
+    label:
+*/
+int remove_after_return(CODE **c) {
+    int n_after = 0;
+    int l;
+    CODE *curc, *ret;
+    if (is_ireturn(*c) || is_areturn(*c) || is_return(*c)) {
+        curc = next(*c);
+
+        /* Keep going until reaching a label, or the end of the code. */
+        while(curc) {
+            if (is_label(curc, &l))
+                break;
+            n_after++;
+            curc = curc->next;
+        }
+
+        if (n_after == 0)
+            return 0;
+
+        if (is_ireturn(*c)) ret = makeCODEireturn(NULL);
+        else if (is_areturn(*c)) ret = makeCODEareturn(NULL);
+        else ret = makeCODEreturn(NULL);
+
+        replace_modified(c, n_after + 1, ret);
+    }
+
+    return 0;
+}
+
 int goto_return(CODE **c) {
     int l;
 
@@ -351,7 +390,7 @@ OPTI optimization[OPTS] = {
     simplify_putfield,
     goto_return,
     remove_nullcheck_const_str,
-    nothing,
+    remove_after_return,
     nothing,
     nothing,
     nothing,
