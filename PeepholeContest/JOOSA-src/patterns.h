@@ -503,6 +503,50 @@ int nothing(CODE **c) {
     return 0;
 }
 
+typedef CODE *(*makeCODElabelF)(int, CODE *);
+
+makeCODElabelF get_if(CODE *c, int *label)
+{
+    if(is_ifeq(c, label)) {
+        return makeCODEifeq;
+    }
+    if(is_ifne(c, label)) {
+        return makeCODEifne;
+    }
+    if(is_if_acmpeq(c, label)) {
+        return makeCODEif_acmpeq;
+    }
+    if(is_if_acmpne(c, label)) {
+        return makeCODEif_acmpne;
+    }
+    if(is_ifnull(c, label)) {
+        return makeCODEifnull;
+    }
+    if(is_ifnonnull(c, label)) {
+        return makeCODEifnonnull;
+    }
+    if(is_if_icmpeq(c, label)) {
+        return makeCODEif_icmpeq;
+    }
+    if(is_if_icmpgt(c, label)) {
+        return makeCODEif_icmpgt;
+    }
+    if(is_if_icmplt(c, label)) {
+        return makeCODEif_icmplt;
+    }
+    if(is_if_icmple(c, label)) {
+        return makeCODEif_icmple;
+    }
+    if(is_if_icmpge(c, label)) {
+        return makeCODEif_icmpge;
+    }
+    if(is_if_icmpne(c, label)) {
+        return makeCODEif_icmpne;
+    }
+
+    return NULL;
+}
+
 /* if_icmplt L
  * goto M
  * L: (L has only one reference)
@@ -516,14 +560,16 @@ int nothing(CODE **c) {
  *  L:
  *  x
  */
-int if_icmplt_iconst_ifeq(CODE **c)
+int if_iconst_ifeq(CODE **c)
 {
     int l1, l2, m, n, o, i;
 
     int isreturn = 0;
 
+    makeCODElabelF maker = NULL;
+
     if (
-            is_if_icmplt(*c, &l1) &&         /* if_icmplt L */
+            (maker = get_if(*c, &l1)) &&         /* if_icmplt L */
             (
              is_goto(next(*c), &m)
              ||
@@ -541,7 +587,7 @@ int if_icmplt_iconst_ifeq(CODE **c)
         return
             replace(c,
                     6,
-                    makeCODEif_icmplt(
+                    maker(
                         l1,
                         isreturn ?
                         makeCODEreturn(
@@ -582,7 +628,7 @@ int load_and_swap(CODE **c)
 
 OPTI optimization[] = {
     const_goto_ifeq,
-    if_icmplt_iconst_ifeq,
+    if_iconst_ifeq,
     simplify_multiplication_right,
     simplify_astore,
     simplify_istore,
