@@ -10,6 +10,8 @@
  * email: hendren@cs.mcgill.ca, mis@brics.dk
  */
 
+ #include <stdlib.h>
+
 /* astore_n
  * aload_n
  * -------->
@@ -328,7 +330,7 @@ int remove_nullcheck_const_str(CODE **c) {
 }
 
 /*
-After a return, any instructions until a label can be safely removed.
+After a return/goto, any instructions until a label can be safely removed.
 (A good compiler shouldn't generate that kind of stuff outright but our
 optimizations might cause it).
     [/i/a]return
@@ -338,11 +340,12 @@ optimizations might cause it).
     [/i/a]return
     label:
 */
-int remove_after_return(CODE **c) {
+int remove_after_return_goto(CODE **c) {
     int n_after = 0;
     int l;
+    int lgoto;
     CODE *curc, *ret;
-    if (is_ireturn(*c) || is_areturn(*c) || is_return(*c)) {
+    if (is_ireturn(*c) || is_areturn(*c) || is_return(*c) || is_goto(*c, &lgoto)) {
         curc = next(*c);
 
         /* Keep going until reaching a label, or the end of the code. */
@@ -358,7 +361,11 @@ int remove_after_return(CODE **c) {
 
         if (is_ireturn(*c)) ret = makeCODEireturn(NULL);
         else if (is_areturn(*c)) ret = makeCODEareturn(NULL);
-        else ret = makeCODEreturn(NULL);
+        else if (is_return(*c)) ret = makeCODEreturn(NULL);
+        else {
+            ret = makeCODEgoto(lgoto, NULL);
+            copylabel(lgoto);
+        }
 
         return replace_modified(c, n_after + 1, ret);
     }
@@ -461,6 +468,36 @@ int flip_eq(CODE **c) {
     return 0;
 }
 
+/*
+    ldc a //string
+    ldc b //string
+    invokevirtual java/lang/String/concat
+    ---->
+    ldc a+b
+*/
+int collapse_ldc_string(CODE **c) {
+    char *s1, *s2, *method, *result;
+    char *STR_CONCAT = "java/lang/String/concat";
+    int n;
+
+    if (
+        is_ldc_string(*c, &s1) &&
+        is_ldc_string(next(*c), &s2) &&
+        is_invokevirtual(next(next(*c)), &method) &&
+        strncmp(method, STR_CONCAT, strlen(STR_CONCAT)) == 0
+    ) {
+        n = strlen(s1);
+        result = malloc(n + strlen(s2) + 1);
+        strcpy(result, s1);
+        strcpy(result + n, s2);
+
+        return replace(c, 3, makeCODEldc_string(result, NULL));
+    }
+
+    return 0;
+}
+
+
 
 int nothing(CODE **c) {
     return 0;
@@ -557,12 +594,12 @@ OPTI optimization[] = {
     simplify_putfield,
     goto_return,
     remove_nullcheck_const_str,
-    remove_after_return,
+    remove_after_return_goto,
     remove_dead_labels,
     load_and_swap,
     remove_iconst_ifeq,
     flip_eq,
-    nothing,
+    collapse_ldc_string,
     nothing,
     nothing,
     nothing,
