@@ -143,6 +143,50 @@ int simplify_astore_aload(CODE **c)
     return 0;
 }
 
+/* istore_n
+ * iload_n
+ * -------->
+ *  nothing
+ *
+ * iload_n
+ * istore_n
+ * -------->
+ *  nothing
+ */
+int simplify_istore_iload(CODE **c)
+{
+    int n1, n2;
+    if (
+             is_istore(*c, &n1) &&
+             is_iload(next(*c), &n2) &&
+             n1 == n2
+    ) {
+        return
+            replace(
+                c,
+                2,
+                makeCODEdup(
+                    makeCODEistore(
+                        n1,
+                        NULL
+                    )
+                )
+        );
+    }
+
+    if (
+            (
+             is_iload(*c, &n1) &&
+             is_istore(next(*c), &n2) &&
+             n1 == n2
+            )
+    ) {
+        return replace(c, 2, NULL);
+    }
+
+    return 0;
+}
+
 /*
  * dup
  * istore_n
@@ -696,6 +740,7 @@ OPTI optimization[] = {
     positive_increment,
     simplify_goto_goto,
     simplify_astore_aload,
+    simplify_istore_iload,
     remove_nop,
     remove_checkcast_on_null,
     simplify_putfield,
