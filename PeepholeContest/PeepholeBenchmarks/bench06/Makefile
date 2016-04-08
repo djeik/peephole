@@ -1,2 +1,2 @@
 all:
-	$(PEEPDIR)/joosc *.java
+	@$(PEEPDIR)/joosc $(JOOSCOPTS) *.java

@@ -1,16 +1,33 @@
-#!/usr/bin/env csh
-#
-# joosc: compiles JOOS source programs into class files using the A- JOOS compiler.
-#
-# usage:  joosc f1.java f2.java ... fn.joos
-#  
-# note:  you should name each source file for ordinary classes with
-#        .java extensions and all external classes with .joos extensions
+#!/bin/bash
+# joosc: compiles JOOS source programs into class files using the A- JOOS
+# compiler.
+# usage: joosc [-O] f1.java f2.java ... fn.joos
+# note: you should name each source file for ordinary classes with
+#      .java extensions and all external classes with .joos extensions
 
-if ( { $PEEPDIR/joos $* } )  then
-  foreach f ( $* )
-    if ( $f != "-O" && $f:e != "joos" ) then
-      java -jar $PEEPDIR/jasmin.jar $f:r.j 
-    endif
-  end
-endif
+out=/dev/null
+
+if $PEEPDIR/joos $JOOSCOPTS $@ > "$out" 2>&1 ; then
+    for f in $@ ; do
+        if [ "$f" != "-O" -a "${f##*.}" != "joos" ] ; then
+            java -jar $PEEPDIR/jasmin.jar ${f%.*}.j
+            if [ "$JOOSCOPTS" = "-O" ] ; then
+                $PEEPDIR/djas -w ${f%.*}.class > ${f%.*}.optdump
+            else
+                $PEEPDIR/djas -w ${f%.*}.class > ${f%.*}.dump
+            fi
+        fi
+    done >"$out" 2>&1
+
+    if [ "$1" = "-O" ] ; then
+        ext=optdump
+    else
+        ext=dump
+    fi
+
+    for g in *.$ext ; do
+        sum=$(grep -o 'code_length [[:digit:]]*' $g | cut -d " " -f2 |
+        paste -s -d + - | bc)
+        echo "$g $sum"
+    done
+fi

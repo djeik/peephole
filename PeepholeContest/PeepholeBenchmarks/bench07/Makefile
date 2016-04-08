@@ -3,16 +3,14 @@ ROOMACTIONS = RoomAction.java BFRoomAction.java FeastRoomAction.java CoinRoomAct
 SRC = $(ROOMACTIONS) Room.java GrueHunt.java InGenerate.java
 
 joos: $(SRC)
-	$(PEEPDIR)/joosc $(SRC)
+	@$(PEEPDIR)/joosc $(SRC)
 
 GrueHunt: $(SRC)
-	javac $(SRC)
-
+	@javac $(SRC)
 
 gen:
-	javac InGenerate.java
-	java InGenerate > in1
+	@javac InGenerate.java
+	@java InGenerate > in1
 
 clean:
-	rm *.class *.j
-
+	@rm *.class *.j

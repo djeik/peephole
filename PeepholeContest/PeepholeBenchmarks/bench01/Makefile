@@ -1,11 +1,11 @@
 all: clean
-	$(PEEPDIR)/joosc BacktrackSolver.java SudokuSolver.java Benchmark.java
+	@$(PEEPDIR)/joosc $(JOOSCOPTS) BacktrackSolver.java SudokuSolver.java Benchmark.java
 
 java:
-	javac BacktrackSolver.java SudokuSolver.java Benchmark.java
+	@javac BacktrackSolver.java SudokuSolver.java Benchmark.java
 
 clean:	
-	rm -rf *.class *.j *~
+	@rm -rf *.class *.j *~
 
 run:
-	java Benchmark < in1
+	@java Benchmark < in1

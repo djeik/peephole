@@ -5,4 +5,4 @@
 # assumes JOOSDIR is set properly
 # assumes a binary called `joos' is on PATH
 
-$PEEPDIR/JOOSA-src/joos $* $PEEPDIR/JOOSexterns/*.joos
+$PEEPDIR/JOOSA-src/joos $@ $PEEPDIR/JOOSexterns/*.joos
