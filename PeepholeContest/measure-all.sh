@@ -2,7 +2,13 @@
 
 set -e
 
-for bench in $(find PeepholeBenchmarks -mindepth 1 -maxdepth 1 -type d) ; do
+if [ -z "$*" ] ; then
+    files="$(find PeepholeBenchmarks -mindepth 1 -maxdepth 1 -type d)"
+else
+    files="$*"
+fi
+
+for bench in $files ; do
     (
     cd $bench
     for f in *.dump ; do
