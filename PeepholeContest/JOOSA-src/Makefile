@@ -1,6 +1,6 @@
 CC = gcc
 
-FLEX = $(shell if [ `uname` = "CYGWIN_NT-6.1-WOW" ] ; then echo '-lfl' ; else echo '-ll' ; fi)
+FLEX = $(shell if [ `uname` = "Darwin" ] ; then echo '-ll' ; else echo '-lfl' ; fi)
 
 # Select the first one when using bison,  and the second one when using byacc
 YACCOPTS = bison -y -d
