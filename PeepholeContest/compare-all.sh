@@ -1,5 +1,21 @@
 #!/bin/bash
 
+OPT_ONLY=0
+NOFILENAME=
+
+while (( $# )) ; do
+    case "$1" in
+        "--opt-only")
+            OPT_ONLY=1
+            ;;
+        "--nofilename")
+            NOFILENAME="--nofilename"
+            ;;
+    esac
+
+    shift
+done
+
 if [[ `uname` == "CYGWIN_NT-6.1-WOW" ]]
 then
     COMPILE_SCRIPT=./cyg_compileall
@@ -9,10 +25,10 @@ fi
 
 set -e
 
-if [ "$1" = "--opt-only" ] ; then
+if [ $OPT_ONLY -eq 1 ] ; then
     $COMPILE_SCRIPT -O
-    ./dump-all.sh
-    ./measure-all.sh | tee results
+    ./dump-all.sh > /dev/null
+    ./measure-all.sh $NOFILENAME | tee results
     exit
 fi
 
