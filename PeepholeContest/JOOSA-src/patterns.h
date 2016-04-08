@@ -43,6 +43,27 @@ int simplify_astore_aload(CODE **c)
 }
 
 /*
+ * dup
+ * istore_n
+ * pop
+ * -------->
+ *  istore_n
+ */
+int simplify_istore(CODE **c)
+{
+    int x;
+    if (
+            is_dup(*c) &&
+            is_istore(next(*c), &x) &&
+            is_pop(next(next(*c)))
+    ) {
+        replace(c, 3, makeCODEistore(x, NULL));
+    }
+
+    return 0;
+}
+
+/*
  * nop
  * --->
  *  nothing
@@ -257,11 +278,12 @@ int remove_nullcheck_const_str(CODE **c) {
 }
 
 
-#define OPTS 9
+#define OPTS 10
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
     simplify_astore,
+    simplify_istore,
     positive_increment,
     simplify_goto_goto,
     simplify_astore_aload,
