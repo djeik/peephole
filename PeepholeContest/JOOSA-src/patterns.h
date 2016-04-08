@@ -646,7 +646,89 @@ int collapse_ldc_string(CODE **c) {
     return 0;
 }
 
+/*
+    new x
+    dup
+    invokenonvirtual x/<init>
+    aload_0
+    swap
+    putfield
+    ---->
+    aload_0
+    new x
+    dup
+    invokenonvirtual x/<init>
+    putfield
 
+    In reality, what we REALLY want is something that goes
+    "if we have aload 0/swap/putfield, remove the swap and put the aload 0
+    just before when that other value on the stack was created", but we can never
+    look behind us, as we are condemned to stare at A+'s ever-advancing back.
+*/
+int remove_swaps_in_field_init(CODE **c) {
+    char *niew, *init, *field;
+    char *target_init;
+    int n, len_new, r;
+    if (
+        is_new(*c, &niew) &&
+        is_dup(next(*c)) &&
+        is_invokenonvirtual(nextby(*c, 2), &init) &&
+        is_aload(nextby(*c, 3), &n) &&
+        n == 0 &&
+        is_swap(nextby(*c, 4)) &&
+        is_putfield(nextby(*c, 5), &field)
+    ) {
+        len_new = strlen(niew);
+        target_init = malloc(len_new + 8);
+        strcpy(target_init, niew);
+        strcpy(target_init + len_new, "/<init>");
+        r = strncmp(target_init, init, len_new + 7);
+        free(target_init);
+
+        if (r == 0) {
+            return replace(c, 6,
+                makeCODEaload(0,
+                makeCODEnew(niew,
+                makeCODEdup(
+                makeCODEinvokenonvirtual(init,
+                makeCODEputfield(field,
+                NULL))))));
+        }
+    }
+
+    return 0;
+}
+
+/*
+    ldc a
+    ldc a
+    --->
+    ldc a
+    dup
+*/
+int dup_duplicate_consts(CODE **c) {
+    char *s1, *s2;
+    int a, b;
+
+    if (
+        is_ldc_int(*c, &a) &&
+        is_ldc_int(next(*c), &b) &&
+        a == b
+    ) {
+        return replace(c, 2, makeCODEldc_int(a, makeCODEdup(NULL)));
+    }
+
+    if (
+        is_ldc_string(*c, &s1) &&
+        is_ldc_string(next(*c), &s2) &&
+        strcmp(s1, s2) == 0
+    ) {
+        return replace(c, 2, makeCODEldc_string(s1, makeCODEdup(NULL)));
+    }
+
+
+    return 0;
+}
 
 int nothing(CODE **c) {
     return 0;
@@ -825,7 +907,8 @@ OPTI optimization[] = {
     collapse_ldc_string,
     remove_aconst_null_in_cmp,
     put_and_get,
-    nothing,
+    dup_duplicate_consts,
+    remove_swaps_in_field_init,
     nothing,
     nothing,
     nothing,
