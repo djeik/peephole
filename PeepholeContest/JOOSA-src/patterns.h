@@ -70,8 +70,8 @@ int simplify_multiplication_right(CODE **c)
 {
     int x, k;
     if (
-          is_iload(*c,&x) && 
-          is_ldc_int(next(*c),&k) && 
+          is_iload(*c,&x) &&
+          is_ldc_int(next(*c),&k) &&
           is_imul(next(next(*c)))
     ) {
         if (k==0)
@@ -117,7 +117,7 @@ int simplify_astore(CODE **c)
  * istore x
  * --------->
  * iinc x k
- */ 
+ */
 int positive_increment(CODE **c)
 {
     int x,y,k;
@@ -145,7 +145,7 @@ int positive_increment(CODE **c)
  * L1:    (reference count reduced by 1)
  * goto L2
  * ...
- * L2:    (reference count increased by 1)  
+ * L2:    (reference count increased by 1)
  */
 int simplify_goto_goto(CODE **c)
 {
@@ -195,7 +195,69 @@ int const_goto_ifeq(CODE **c)
     return 0;
 }
 
-#define OPTS 7
+/*
+null can be cast to anything, so there's no need to check explicitly.
+    aconst_null
+    checkcast x
+    ------->
+    aconst_null
+*/
+int remove_checkcast_on_null(CODE **c)
+{
+    char* name;
+    if (
+        is_aconst_null(*c) &&
+        is_checkcast(next(*c), &name)
+    ) {
+        return replace(c,2,makeCODEaconst_null(NULL));
+    }
+    return 0;
+}
+
+
+/*
+A more sophisticated version of dup ... pop removal, specifically for putfields.
+    dup
+    aload_0
+    swap
+    putfield x
+    pop
+    ------>
+    aload_0
+    swap
+    putfield x
+*/
+int simplify_putfield(CODE **c)
+{
+    int n;
+    char *f;
+    if (
+        is_dup(*c) &&
+        is_aload(next(*c), &n) &&
+        !n &&
+        is_swap(next(next(*c))) &&
+        is_putfield(next(next(next(*c))), &f) &&
+        is_pop(next(next(next(next(*c)))))
+    ) {
+        return replace(c, 5,
+            makeCODEaload(n,
+                makeCODEswap(
+                    makeCODEputfield(f, NULL))));
+    }
+
+    return 0;
+}
+
+
+/*
+A check is generated to replace nulls bu "null" when calling println.
+*/
+int remove_nullcheck_const_str(CODE **c) {
+    return 0;
+}
+
+
+#define OPTS 9
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
@@ -204,5 +266,7 @@ OPTI optimization[OPTS] = {
     simplify_goto_goto,
     simplify_astore_aload,
     remove_nop,
-    const_goto_ifeq
+    const_goto_ifeq,
+    remove_checkcast_on_null,
+    simplify_putfield
 };
