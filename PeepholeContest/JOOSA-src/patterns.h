@@ -10,6 +10,53 @@
  * email: hendren@cs.mcgill.ca, mis@brics.dk
  */
 
+/* astore_n
+ * aload_n
+ * -------->
+ *  nothing
+ *
+ * aload_n
+ * astore_n
+ * -------->
+ *  nothing
+ */
+int simplify_astore_aload(CODE **c)
+{
+    int n1, n2;
+    if (
+            (
+             is_astore(*c, &n1) &&
+             is_aload(next(*c), &n2) &&
+             n1 == n2
+            )
+            ||
+            (
+             is_aload(*c, &n1) &&
+             is_astore(next(*c), &n2) &&
+             n1 == n2
+            )
+    ) {
+        return replace(c, 2, NULL);
+    }
+
+    return 0;
+}
+
+/*
+ * nop
+ * --->
+ *  nothing
+ */
+int remove_nop(CODE **c)
+{
+    if (is_nop(*c))
+    {
+        return replace(c, 1, NULL);
+    }
+
+    return 0;
+}
+
 /* iload x        iload x        iload x
  * ldc 0          ldc 1          ldc 2
  * imul           imul           imul
@@ -115,11 +162,13 @@ int simplify_goto_goto(CODE **c)
     return 0;
 }
 
-#define OPTS 4
+#define OPTS 6
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
     simplify_astore,
     positive_increment,
-    simplify_goto_goto
+    simplify_goto_goto,
+    simplify_astore_aload,
+    remove_nop
 };
