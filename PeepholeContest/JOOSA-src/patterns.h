@@ -712,18 +712,89 @@ int if_iconst_ifeq(CODE **c)
 
 int load_and_swap(CODE **c)
 {
-    int n;
-    char* s;
-    int a;
+    int n1;
+    char *s1;
+    CODE *c1, *c2;
 
-    if (is_aload(next(*c), &a) && is_swap(nextby(*c, 2))) {
-        if (is_ldc_int(*c, &n)) {
-            return replace(c, 3, makeCODEaload(a, makeCODEldc_int(n, NULL)));
-        }
+    if (is_ldc_int(*c, &n1)) {
+        c2 = makeCODEldc_int(n1, NULL);
+    }
+    else if (is_ldc_string(*c, &s1)) {
+        c2 = makeCODEldc_string(s1, NULL);
+    }
+    else if (is_iload(*c, &n1)) {
+        c2 = makeCODEiload(n1, NULL);
+    }
+    else if (is_aload(*c, &n1)) {
+        c2 = makeCODEaload(n1, NULL);
+    }
+    else {
+        return 0;
+    }
 
-        if (is_ldc_string(*c, &s)) {
-            return replace(c, 3, makeCODEaload(a, makeCODEldc_string(s, NULL)));
-        }
+    if (is_ldc_int(next(*c), &n1)) {
+        c1 = makeCODEldc_int(n1, c2);
+    }
+    else if (is_ldc_string(next(*c), &s1)) {
+        c1 = makeCODEldc_string(s1, c2);
+    }
+    else if (is_iload(next(*c), &n1)) {
+        c1 = makeCODEiload(n1, c2);
+    }
+    else if (is_aload(next(*c), &n1)) {
+        c1 = makeCODEaload(n1, c2);
+    }
+    else {
+        return 0;
+    }
+
+    if (is_swap(nextby(*c, 2))) {
+        return replace(c, 3, c1);
+    }
+
+    return 0;
+}
+
+/* aload n
+ * swap
+ * putfield f
+ * aload n
+ * getfield f
+ * ---------->
+ *  dup
+ *  aload n
+ *  swap
+ *  putfield f
+ */
+int put_and_get(CODE **c)
+{
+    int a1, a2;
+    char *field1, *field2;
+    if (
+            is_aload(*c, &a1) &&
+            is_swap(next(*c)) &&
+            is_putfield(nextby(*c, 2), &field1) &&
+            is_aload(nextby(*c, 3), &a2) &&
+            is_getfield(nextby(*c, 4), &field2) &&
+            a1 == a2 &&
+            strcmp(field1, field2) == 0
+    ) {
+        return
+            replace(
+                c,
+                5,
+                makeCODEdup(
+                    makeCODEaload(
+                        a1,
+                        makeCODEswap(
+                            makeCODEputfield(
+                                field1,
+                                NULL
+                            )
+                        )
+                    )
+                )
+            );
     }
 
     return 0;
@@ -753,7 +824,7 @@ OPTI optimization[] = {
     flip_cond,
     collapse_ldc_string,
     remove_aconst_null_in_cmp,
-    nothing,
+    put_and_get,
     nothing,
     nothing,
     nothing,
