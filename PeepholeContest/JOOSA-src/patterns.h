@@ -364,6 +364,13 @@ int remove_dead_labels(CODE **c) {
     return 0;
 }
 
+/* goto L
+ * ...
+ * L:
+ * return
+ * ------->
+ *  return (refcount of L--)
+ */
 int goto_return(CODE **c) {
     int l;
 
