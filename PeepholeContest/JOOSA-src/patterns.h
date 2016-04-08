@@ -271,9 +271,46 @@ int simplify_putfield(CODE **c)
 
 
 /*
-A check is generated to replace nulls bu "null" when calling println.
+A check is generated to replace nulls bu "null" when calling println. This
+occurs even when we're calling with a string literal, which is of course
+unnecessary.
+
+    ldc "a string constant"
+    dup
+    ifnull null_x
+    goto stop_x
+    null_x:
+    pop
+    ldc "null"
+    stop_x:
+    ------>
+    ldc "a string constant"
+
+Of course, those labels should be unique.
+
+This may be an oddly specific optmization, but it saves 7 (SEVEN!!) instructions.
 */
 int remove_nullcheck_const_str(CODE **c) {
+    char *s, *s2;
+    int lbl_null, lbl_stop, la, lb;
+    if (
+        is_ldc_string(*c, &s) &&
+        is_dup(next(*c)) &&
+        is_ifnull(nextby(*c, 2), &lbl_null) &&
+        is_goto(nextby(*c, 3), &lbl_stop) &&
+        is_label(nextby(*c, 4), &la) &&
+        la == lbl_null &&
+        uniquelabel(la) &&
+        is_pop(nextby(*c, 5)) &&
+        is_ldc_string(nextby(*c, 6), &s2) &&
+        strcmp(s2, "null") == 0 &&
+        is_label(nextby(*c, 7), &lb) &&
+        lb == lbl_stop &&
+        uniquelabel(lb)
+    ) {
+        return replace(c, 8, makeCODEldc_string(s, NULL));
+    }
+
     return 0;
 }
 
@@ -295,7 +332,11 @@ int goto_return(CODE **c) {
     return 0;
 }
 
-#define OPTS 11
+int nothing(CODE **c) {
+    return 0;
+}
+
+#define OPTS 100
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
@@ -308,5 +349,94 @@ OPTI optimization[OPTS] = {
     const_goto_ifeq,
     remove_checkcast_on_null,
     simplify_putfield,
-    goto_return
+    goto_return,
+    remove_nullcheck_const_str,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing
 };
