@@ -202,6 +202,7 @@ int const_goto_ifeq(CODE **c)
             is_ifeq(next(destination(l)), &d)
     ) {
         droplabel(l);
+        copylabel(d);
         return
             replace(
                     c,
@@ -347,7 +348,17 @@ int remove_after_return(CODE **c) {
         else if (is_areturn(*c)) ret = makeCODEareturn(NULL);
         else ret = makeCODEreturn(NULL);
 
-        replace_modified(c, n_after + 1, ret);
+        return replace_modified(c, n_after + 1, ret);
+    }
+
+    return 0;
+}
+
+/* Removes any dead labels. */
+int remove_dead_labels(CODE **c) {
+    int n;
+    if (is_label(*c, &n) && deadlabel(n)) {
+        return replace_modified(c, 1, NULL);
     }
 
     return 0;
@@ -391,7 +402,7 @@ OPTI optimization[OPTS] = {
     goto_return,
     remove_nullcheck_const_str,
     remove_after_return,
-    nothing,
+    remove_dead_labels,
     nothing,
     nothing,
     nothing,
