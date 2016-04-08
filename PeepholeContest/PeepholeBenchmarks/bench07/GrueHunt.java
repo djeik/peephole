@@ -39,7 +39,7 @@ public class GrueHunt
 
         g = new GrueHunt();
         giveup = false;
-        logo = "╔═╝┏━┓╻ ╻┏━╸ ║ ║╻ ╻┏┓╻╺┳╸\n║ ║┣┳┛┃ ┃┣╸  ╔═║┃ ┃┃┗┫ ┃ \n══╝╹┗╸┗━┛┗━╸ ╝ ╝┗━┛╹ ╹ ╹ ";
+        logo = "GRUE HUNT";
         escapeChance = 20;
         escape = 100;
         io = new JoosIO();
