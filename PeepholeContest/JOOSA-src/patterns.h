@@ -527,94 +527,15 @@ int load_and_swap(CODE **c)
     int n;
     char* s;
     int a;
-    int i;
 
-    int isaload;
-    int isstring;
+    if (is_aload(next(*c), &a) && is_swap(nextby(*c, 2))) {
+        if (is_ldc_int(*c, &n)) {
+            return replace(c, 3, makeCODEaload(a, makeCODEldc_int(n, NULL)));
+        }
 
-    if (
-            (
-             (isstring =
-              (is_ldc_string(*c, &s) ? 1 : 0) || (is_ldc_int(*c, &n) ? -1 : 0)
-             )
-            )
-            &&
-            (
-             (isaload =
-              (is_aload(next(*c), &a) ? 1 : 0) || (is_iload(next(*c), &i) ? -1 : 0)
-             )
-            )
-            &&
-            is_swap(next(next(*c)))
-    ) {
-        CODE *stringcode = isstring == 1 ?
-            makeCODEldc_string(
-                s,
-                NULL
-            )
-            :
-            makeCODEldc_int(
-                n,
-                NULL
-            );
-
-        return
-            replace(
-                    c,
-                    3,
-                    isaload == 1 ?
-                    makeCODEaload(
-                        a,
-                        stringcode
-                    )
-                    :
-                    makeCODEiload(
-                        i,
-                        stringcode
-                    )
-            );
-    }
-
-    if (
-            (
-             (isaload =
-              (is_aload(next(*c), &a) ? 1 : 0) || (is_iload(next(*c), &i) ? -1 : 0)
-             )
-            )
-            &&
-            (
-             (isstring =
-              (is_ldc_string(*c, &s) ? 1 : 0) || (is_ldc_int(*c, &n) ? -1 : 0)
-             )
-            )
-            &&
-            is_swap(next(next(*c)))
-    ) {
-        CODE *loadcode = isaload == 1 ?
-            makeCODEaload(
-                    a,
-                    NULL
-            )
-            :
-            makeCODEiload(
-                    i,
-                    NULL
-            );
-
-        return replace(
-                c,
-                3,
-                isstring == 1 ?
-                makeCODEldc_string(
-                    s,
-                    loadcode
-                )
-                :
-                makeCODEldc_int(
-                    n,
-                    loadcode
-                )
-        );
+        if (is_ldc_string(*c, &s)) {
+            return replace(c, 3, makeCODEaload(a, makeCODEldc_string(s, NULL)));
+        }
     }
 
     return 0;
