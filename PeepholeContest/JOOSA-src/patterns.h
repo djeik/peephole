@@ -162,7 +162,40 @@ int simplify_goto_goto(CODE **c)
     return 0;
 }
 
-#define OPTS 6
+/*
+ * iconst_0
+ * goto L
+ * ...
+ * L:
+ * ifeq M
+ * -------->
+ *  goto M
+ */
+int const_goto_ifeq(CODE **c)
+{
+    int n, l, d;
+    if (
+            is_ldc_int(*c, &n) &&
+            !n &&
+            is_goto(next(*c), &l) &&
+            is_ifeq(next(destination(l)), &d)
+    ) {
+        droplabel(l);
+        return
+            replace(
+                    c,
+                    2,
+                    makeCODEgoto(
+                        d,
+                        NULL
+                    )
+            );
+    }
+
+    return 0;
+}
+
+#define OPTS 7
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
@@ -170,5 +203,6 @@ OPTI optimization[OPTS] = {
     positive_increment,
     simplify_goto_goto,
     simplify_astore_aload,
-    remove_nop
+    remove_nop,
+    const_goto_ifeq
 };
