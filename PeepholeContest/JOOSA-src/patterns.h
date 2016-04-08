@@ -277,8 +277,25 @@ int remove_nullcheck_const_str(CODE **c) {
     return 0;
 }
 
+int goto_return(CODE **c) {
+    int l;
 
-#define OPTS 10
+    if (
+            is_goto(*c, &l) &&
+            is_return(next(destination(l)))
+    ) {
+        droplabel(l);
+        return replace(
+            c,
+            1,
+            makeCODEreturn(NULL)
+        );
+    }
+
+    return 0;
+}
+
+#define OPTS 11
 
 OPTI optimization[OPTS] = {
     simplify_multiplication_right,
@@ -290,5 +307,6 @@ OPTI optimization[OPTS] = {
     remove_nop,
     const_goto_ifeq,
     remove_checkcast_on_null,
-    simplify_putfield
+    simplify_putfield,
+    goto_return
 };
