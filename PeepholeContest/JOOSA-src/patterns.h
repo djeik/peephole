@@ -25,7 +25,7 @@ struct codelist *build_backlist(CODE *to_here, CODE *here, struct codelist *acc)
     struct codelist *singleton;
     if(here == NULL)
     {
-        /*fprintf(stderr, "backlist construction failed\t%p\n", *METHOD_START);*/
+        fprintf(stderr, "backlist construction failed\t%p\n", *METHOD_START);
         return NULL;
     }
 
@@ -34,11 +34,9 @@ struct codelist *build_backlist(CODE *to_here, CODE *here, struct codelist *acc)
     singleton->here = here;
 
     if(here == to_here) {
-        /* fprintf(stderr, "; END\n");*/
         return singleton;
     }
     else {
-        /*fprintf(stderr, " -> %p", here->next);*/
         return build_backlist(to_here, here->next, singleton);
     }
 }
@@ -691,7 +689,6 @@ int collapse_gotos(CODE **c) {
     makeCODElabelF maker = NULL;
     if ((maker = get_if(*c, &l1)) || is_goto(*c, &l1)) {
 
-        /*fprintf(stderr, "GOING TO %p: %p\t\t", destination(l1), *METHOD_START);*/
         struct codelist* at_label = build_backlist(destination(l1), *METHOD_START, NULL);
 
         if (at_label && at_label->there) {
@@ -1125,10 +1122,9 @@ int super_swap_elimination(CODE **c)
 
     for(height = 2; height > 0; backlist = backlist->there, instrs++)
     {
-        fprintf(stderr, "height: %d\n", height);
         if(backlist == NULL || backlist->here == NULL)
         {
-            fprintf(stderr, "failure\n");
+            fprintf(stderr, "backlist traversal failed\n");
             return 0;
         }
 
@@ -1140,8 +1136,6 @@ int super_swap_elimination(CODE **c)
 
         height -= inc;
     }
-
-    fprintf(stderr, "done height: %d\n", height);
 
     if(backlist == NULL)
         /* then we're at the top of the method */
