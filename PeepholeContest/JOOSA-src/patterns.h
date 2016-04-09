@@ -1148,7 +1148,7 @@ OPTI optimization[] = {
     remove_aconst_null_in_cmp,
     put_and_get,
     dup_duplicate_consts,
-    remove_swaps_in_field_init,
+    /* remove_swaps_in_field_init, // broken */
     collapse_gotos,
     /* refactor_branch, // broken */
     super_swap_elimination,
