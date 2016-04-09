@@ -1070,8 +1070,6 @@ int bookkeeping(CODE **c)
         d = d->next;
     }
 
-    replace(c, 0, makeCODEldc_int(0, makeCODEistore(MAX_LOCALS + 1, NULL)));
-
     NEW_METHOD = 0;
 
     return 0;
