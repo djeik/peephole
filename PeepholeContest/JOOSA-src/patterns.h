@@ -1087,22 +1087,38 @@ int super_swap_elimination(CODE **c)
 
     backlist = build_backlist(*c, *METHOD_START, NULL);
 
-    for(height = 2; height > -1; backlist = backlist->there, instrs++)
+    for(height = 2; height > 0; backlist = backlist->there, instrs++)
     {
-        if(backlist == NULL)
+        fprintf(stderr, "height: %d\n", height);
+        if(backlist == NULL || backlist->here == NULL)
         {
-            fprintf(stderr, ".");
+            fprintf(stderr, "failure\n");
             return 0;
         }
 
-        stack_effect(backlist->here, &inc, &affected, &used);
+        if(stack_effect(backlist->here, &inc, &affected, &used) != 0)
+        {
+            fprintf(stderr, "stack analysis invalidated\n");
+            return 0;
+        }
+
         height -= inc;
     }
 
-    backlist->here->next = makeCODEaload(a, backlist->here->next);
-    *c = next(next(*c));
+    fprintf(stderr, "done height: %d\n", height);
 
-    return 0;
+    if(backlist == NULL)
+        /* then we're at the top of the method */
+        *METHOD_START = makeCODEaload(a, *METHOD_START);
+    else
+        backlist->here->next = makeCODEaload(a, backlist->here->next->next);
+
+    if(backlist != NULL && backlist->here == NULL)
+        return 0;
+
+    replace(c, 2, NULL);
+
+    return 1;
 }
 
 #define OPTS 100
