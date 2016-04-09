@@ -711,6 +711,42 @@ int collapse_gotos(CODE **c) {
 }
 
 /*
+    invokevirtual j/l/S/concat
+    dup
+    ifnonnull stop:
+    pop
+    ldc "null"
+    stop:           [unique]
+    ---->
+    invokevirtual j/l/S/concat
+
+Remove null checks following a call to String.concat.
+*/
+int remove_nullcheck_concat(CODE **c) {
+    int l1, l2;
+    char *meth, *nulll;
+    char *TARGET = "java/lang/String/concat";
+    char *nulltarget = "null";
+    if(
+        is_invokevirtual(*c, &meth) &&
+        is_dup(next(*c)) &&
+        is_ifnonnull(nextby(*c, 2), &l1) &&
+        is_pop(nextby(*c, 3)) &&
+        is_ldc_string(nextby(*c, 4), &nulll) &&
+        is_label(nextby(*c, 5), &l2) &&
+        l1 == l2 &&
+        uniquelabel(l2) &&
+        strcmp(nulll, nulltarget) == 0 &&
+        strncmp(meth, TARGET, strlen(TARGET)) == 0
+    ) {
+        return replace(c, 6, makeCODEinvokevirtual(meth, NULL));
+    }
+
+    return 0;
+}
+
+
+/*
 Flips conditions (integers and refs) in trivial goto cases.
     if_[cond] lbl1
     goto lbl2
@@ -1152,7 +1188,7 @@ OPTI optimization[] = {
     collapse_gotos,
     /* refactor_branch, // broken */
     super_swap_elimination,
-    nothing,
+    remove_nullcheck_concat,
     nothing,
     nothing,
     nothing,
