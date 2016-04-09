@@ -22,13 +22,14 @@ struct codelist {
 
 struct codelist *build_backlist(CODE *to_here, CODE *here, struct codelist *acc)
 {
+    struct codelist *singleton;
     if(here == NULL)
     {
         /*fprintf(stderr, "backlist construction failed\t%p\n", *METHOD_START);*/
         return NULL;
     }
 
-    struct codelist *singleton = malloc(sizeof(*singleton));
+    singleton = malloc(sizeof(*singleton));
     singleton->there = acc;
     singleton->here = here;
 
@@ -1072,6 +1073,37 @@ int bookkeeping(CODE **c)
     replace(c, 0, makeCODEldc_int(0, makeCODEistore(MAX_LOCALS + 1, NULL)));
 
     NEW_METHOD = 0;
+
+    return 0;
+}
+
+int super_swap_elimination(CODE **c)
+{
+    int height, inc, affected, used, a;
+    char *f;
+    struct codelist *backlist;
+    int instrs = 0;
+
+    if(!(is_aload(*c, &a) && is_swap(next(*c)) && is_putfield(nextby(*c, 2), &f)))
+        return 0;
+
+    backlist = build_backlist(*c, *METHOD_START, NULL);
+
+    for(height = 2; height > -1; backlist = backlist->there, instrs++)
+    {
+        if(backlist == NULL)
+        {
+            fprintf(stderr, ".");
+            return 0;
+        }
+
+        stack_effect(backlist->here, &inc, &affected, &used);
+        height -= inc;
+    }
+
+    backlist->here->next = makeCODEaload(a, backlist->here->next);
+    *c = next(next(*c));
+
     return 0;
 }
 
@@ -1103,8 +1135,9 @@ OPTI optimization[] = {
     put_and_get,
     dup_duplicate_consts,
     remove_swaps_in_field_init,
-    /* refactor_branch, */ /* broken */
     collapse_gotos,
+    /* refactor_branch, // broken */
+    super_swap_elimination,
     nothing,
     nothing,
     nothing,
