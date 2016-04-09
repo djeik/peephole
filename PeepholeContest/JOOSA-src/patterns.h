@@ -1151,7 +1151,69 @@ int super_swap_elimination(CODE **c)
     return 1;
 }
 
-#define OPTS 100
+int eliminate_constant_variable(CODE **c)
+{
+    CODE *p = *METHOD_START, *pl = NULL, *q, *ql;
+    int n, i = -1, i2, l;
+
+    /* scan the head of the method to look for storing a constant into a local.
+     */
+    while(p != NULL)
+    {
+        if(is_label(p, &l) || get_if(p, &l))
+            break;
+
+        if(is_ldc_int(p, &n) && is_istore(next(p), &i))
+            break;
+
+        pl = p;
+        p = next(p);
+    }
+
+    if(i == -1 || p == NULL)
+        return 0;
+
+    /* then check that there are no more istore_i */
+
+    q = p;
+
+    while (q != NULL)
+    {
+        if(is_istore(q, &i2) && i == i2)
+            /* if we write to that local again, then it isn't always constant,
+             * so our optimization can't proceed
+             */
+            return 0;
+
+        q = next(q);
+    }
+
+    /* now we know that there are no more istores to that local, so every iload
+     * from that local can be replaced by a corresponding iconst
+     */
+
+    ql = p;
+    q = p->next;
+
+    while(q != NULL)
+    {
+        if(is_iload(q, &i2) && i == i2)
+            ql->next = makeCODEldc_int(n, q->next);
+        ql = q;
+        q = q->next;
+    }
+
+    /* finally we can remove the iconst/istore at the method head */
+    
+    if(pl == NULL)
+        return replace(METHOD_START, 2, NULL);
+    else
+        pl->next = p->next->next;
+
+    return 1;
+}
+
+#define OPTS 50
 
 OPTI optimization[] = {
     bookkeeping,
@@ -1183,6 +1245,7 @@ OPTI optimization[] = {
     /* refactor_branch, // broken */
     super_swap_elimination,
     remove_nullcheck_concat,
+    eliminate_constant_variable,
     nothing,
     nothing,
     nothing,
