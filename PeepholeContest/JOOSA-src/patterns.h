@@ -12,7 +12,62 @@
 
  #include <stdlib.h>
 
- typedef CODE *(*makeCODElabelF)(int, CODE *);
+int MAX_LOCALS = 0;
+CODE *METHOD_START = NULL;
+
+/*
+ * Compare two CODEs.
+ * A code C is equal to a code D if they have the same kind, and the value
+ * associated with that kind in C is equal to the value associated with that
+ * kind in D.
+ */
+int codecmp(CODE *c1, CODE *c2) {
+    if(c1->kind != c2->kind)
+        return 0;
+
+    switch(c1->kind)
+    {
+        case newCK:
+        case instanceofCK:
+        case checkcastCK:
+        case ldc_stringCK:
+        case getfieldCK:
+        case putfieldCK:
+        case invokevirtualCK:
+        case invokenonvirtualCK:
+            return strcmp(c1->val.getfieldC, c2->val.getfieldC) == 0;
+            break;
+        case labelCK:
+        case gotoCK:
+        case ifeqCK:
+        case ifneCK:
+        case if_acmpeqCK:
+        case if_acmpneCK:
+        case ifnullCK:
+        case ifnonnullCK:
+        case if_icmpeqCK:
+        case if_icmpgtCK:
+        case if_icmpltCK:
+        case if_icmpleCK:
+        case if_icmpgeCK:
+        case if_icmpneCK:
+        case aloadCK:
+        case astoreCK:
+        case iloadCK:
+        case istoreCK:
+        case ldc_intCK:
+            return c1->val.iloadC == c2->val.iloadC;
+            break;
+        case iincCK:
+            return memcmp((void*)&c1->val, (void*)&c2->val, sizeof(c1->val.iincC));
+            break;
+        default:
+            fprintf(stderr, "failed to compare CODE\n");
+            return 0;
+    }
+}
+
+typedef CODE *(*makeCODElabelF)(int, CODE *);
 
 makeCODElabelF get_if(CODE *c, int *label)
 {
@@ -882,9 +937,116 @@ int put_and_get(CODE **c)
     return 0;
 }
 
+/* if* L
+ * c
+ * c'
+ * ...
+ * L:
+ * c
+ * c'
+ * ------> Provided L is unique
+ *  c
+ *  if* L
+ *  c'
+ *  ...
+ *  L:
+ *  c'
+ */
+int refactor_branch(CODE **c)
+{
+    makeCODElabelF maker;
+    int l;
+
+    if (
+            (maker = get_if(*c, &l)) &&
+            codecmp(next(*c), next(destination(l)))
+    ) {
+        CODE *common1, *common2;
+
+        common1 = next(*c);
+        common2 = next(destination(l));
+
+        common1->next = maker(l, next(next(*c)));
+        destination(l)->next = next(next(destination(l)));
+
+        *c = common1;
+
+        return 1;
+    }
+
+    return 0;
+}
+
+int is_load(CODE *d, int *n)
+{
+    return is_iload(d, n) || is_istore(d, n) || is_aload(d, n) || is_astore(d, n);
+}
+
+struct codelist
+{
+    CODE *here;
+    codelist *there;
+};
+
+codelist *build_backlist(CODE *to_here, CODE *here, codelist *acc)
+{
+    if(here == NULL)
+    {
+        fprintf(stderr, "backlist construction failed\n");
+        return NULL;
+    }
+
+    codelist *singleton = malloc(sizeof(*singleton));
+    singleton->there = acc;
+    singleton->here = here;
+
+    if(here == to_here)
+        return singleton;
+    else
+        return build_backlist(to_here, here->next, singleton);
+}
+
+int bookkeeping(CODE **c)
+{
+    static NEW_METHOD = 1;
+    CODE *d = *c;
+    METHOD_START = *c;
+
+    if(*c == NULL || (*c)->next == NULL)
+    {
+        NEW_METHOD = 1;
+        return 0;
+    }
+
+    if(!NEW_METHOD)
+        return 0;
+
+    MAX_LOCALS = 0;
+
+    fprintf(stderr, "WHY?!\n");
+
+    while(d != NULL)
+    {
+        int n;
+        if(is_load(d, &n) && n > MAX_LOCALS)
+            MAX_LOCALS = n;
+        d = d->next;
+    }
+
+    fprintf(stderr, "REPLACE\n");
+    replace(c, 0, makeCODEldc_int(0, makeCODEistore(MAX_LOCALS + 1, NULL)));
+
+    NEW_METHOD = 0;
+
+    fprintf(stderr, "BYE\n");
+
+    return 0;
+}
+
 #define OPTS 100
 
 OPTI optimization[] = {
+    bookkeeping,
     const_goto_ifeq,
     if_iconst_ifeq,
     simplify_multiplication_right,
@@ -909,6 +1071,7 @@ OPTI optimization[] = {
     put_and_get,
     dup_duplicate_consts,
     remove_swaps_in_field_init,
+    // refactor_branch, // broken
     nothing,
     nothing,
     nothing,
