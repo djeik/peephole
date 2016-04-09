@@ -95,6 +95,17 @@ int codecmp(CODE *c1, CODE *c2) {
 
 typedef CODE *(*makeCODElabelF)(int, CODE *);
 
+makeCODElabelF get_ifeq_or_ifne(CODE *c, int *label)
+{
+    if(is_ifeq(c, label)) {
+        return makeCODEifeq;
+    }
+    if(is_ifne(c, label)) {
+        return makeCODEifeq;
+    }
+    return NULL;
+}
+
 makeCODElabelF get_if(CODE *c, int *label)
 {
     if(is_ifeq(c, label)) {
