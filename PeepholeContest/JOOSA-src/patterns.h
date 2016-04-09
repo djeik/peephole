@@ -13,7 +13,34 @@
  #include <stdlib.h>
 
 int MAX_LOCALS = 0;
-CODE *METHOD_START = NULL;
+CODE **METHOD_START = NULL;
+
+struct codelist {
+    CODE *here;
+    struct codelist *there;
+};
+
+struct codelist *build_backlist(CODE *to_here, CODE *here, struct codelist *acc)
+{
+    if(here == NULL)
+    {
+        /*fprintf(stderr, "backlist construction failed\t%p\n", *METHOD_START);*/
+        return NULL;
+    }
+
+    struct codelist *singleton = malloc(sizeof(*singleton));
+    singleton->there = acc;
+    singleton->here = here;
+
+    if(here == to_here) {
+        /* fprintf(stderr, "; END\n");*/
+        return singleton;
+    }
+    else {
+        /*fprintf(stderr, " -> %p", here->next);*/
+        return build_backlist(to_here, here->next, singleton);
+    }
+}
 
 /*
  * Compare two CODEs.
@@ -648,6 +675,41 @@ int remove_aconst_null_in_cmp(CODE **c) {
 }
 
 /*
+    [jump/goto] lbl_1
+    ...
+    lbl_2:
+    lbl_1:
+    ---->
+    [jump/goto] lbl_2
+    ...
+    lbl_2: (copied)
+    lbl_1: (dropped)
+*/
+int collapse_gotos(CODE **c) {
+    int l1, l2;
+    makeCODElabelF maker = NULL;
+    if ((maker = get_if(*c, &l1)) || is_goto(*c, &l1)) {
+
+        /*fprintf(stderr, "GOING TO %p: %p\t\t", destination(l1), *METHOD_START);*/
+        struct codelist* at_label = build_backlist(destination(l1), *METHOD_START, NULL);
+
+        if (at_label && at_label->there) {
+            if (is_label(at_label->there->here, &l2)) {
+                droplabel(l1);
+                copylabel(l2);
+
+                if(!maker)
+                    return replace(c, 1, makeCODEgoto(l2, NULL));
+                else
+                    return replace(c, 1, maker(l2, NULL));
+            }
+        }
+    }
+
+    return 0;
+}
+
+/*
 Flips conditions (integers and refs) in trivial goto cases.
     if_[cond] lbl1
     goto lbl2
@@ -982,35 +1044,10 @@ int is_load(CODE *d, int *n)
     return is_iload(d, n) || is_istore(d, n) || is_aload(d, n) || is_astore(d, n);
 }
 
-struct codelist
-{
-    CODE *here;
-    codelist *there;
-};
-
-codelist *build_backlist(CODE *to_here, CODE *here, codelist *acc)
-{
-    if(here == NULL)
-    {
-        fprintf(stderr, "backlist construction failed\n");
-        return NULL;
-    }
-
-    codelist *singleton = malloc(sizeof(*singleton));
-    singleton->there = acc;
-    singleton->here = here;
-
-    if(here == to_here)
-        return singleton;
-    else
-        return build_backlist(to_here, here->next, singleton);
-}
-
 int bookkeeping(CODE **c)
 {
     static NEW_METHOD = 1;
     CODE *d = *c;
-    METHOD_START = *c;
 
     if(*c == NULL || (*c)->next == NULL)
     {
@@ -1021,9 +1058,8 @@ int bookkeeping(CODE **c)
     if(!NEW_METHOD)
         return 0;
 
+    METHOD_START = c;
     MAX_LOCALS = 0;
-
-    fprintf(stderr, "WHY?!\n");
 
     while(d != NULL)
     {
@@ -1033,13 +1069,9 @@ int bookkeeping(CODE **c)
         d = d->next;
     }
 
-    fprintf(stderr, "REPLACE\n");
     replace(c, 0, makeCODEldc_int(0, makeCODEistore(MAX_LOCALS + 1, NULL)));
 
     NEW_METHOD = 0;
-
-    fprintf(stderr, "BYE\n");
-
     return 0;
 }
 
@@ -1071,8 +1103,8 @@ OPTI optimization[] = {
     put_and_get,
     dup_duplicate_consts,
     remove_swaps_in_field_init,
-    // refactor_branch, // broken
-    nothing,
+    /* refactor_branch, */ /* broken */
+    collapse_gotos,
     nothing,
     nothing,
     nothing,
