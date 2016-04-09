@@ -657,6 +657,32 @@ int remove_iconst_ifeq(CODE **c) {
     return 0;
 }
 
+
+/*
+
+    iconst_0            iconst_0
+    if_icmpeq lbl       if_icmpne lbl
+    ---->               ---->
+    ifeq lbl            ifne lbl
+
+Aside: Laurie, why can't we construct ifge, ifgt, ifle, iflt ??!?!
+*/
+int icmp_to_if_right(CODE **c) {
+    int l, n;
+    int flg = 0;
+    if (
+        is_ldc_int(*c, &n) &&
+        n == 0 &&
+        ((flg = is_if_icmpeq(next(*c), &l) ? 1 : 0)
+            || (flg = is_if_icmpne(next(*c), &l) ? 2: 0))
+    ) {
+        CODE* res = flg == 2 ? makeCODEifne(l, NULL) : makeCODEifeq(l, NULL);
+        return replace(c, 2, res);
+    }
+
+    return 0;
+}
+
 /*
     aconst_null         aconst_null
     if_acmpeq lbl       if_acmpne lbl
@@ -1215,7 +1241,7 @@ int eliminate_constant_variable(CODE **c)
     }
 
     /* finally we can remove the iconst/istore at the method head */
-    
+
     if(pl == NULL)
         return replace(METHOD_START, 2, NULL);
     else
@@ -1257,7 +1283,7 @@ OPTI optimization[] = {
     super_swap_elimination,
     remove_nullcheck_concat,
     eliminate_constant_variable,
-    nothing,
+    icmp_to_if_right,
     nothing,
     nothing,
     nothing,

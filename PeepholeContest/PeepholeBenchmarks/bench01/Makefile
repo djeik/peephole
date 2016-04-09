@@ -4,8 +4,8 @@ all: clean
 java:
 	@javac BacktrackSolver.java SudokuSolver.java Benchmark.java
 
-clean:	
+clean:
 	@rm -rf *.class *.j *~
 
 run:
-	@java Benchmark < in1
+	@java -classpath "$(PEEPDIR)/jasmin.jar;$(PEEPDIR)/bcel-5.1.jar;$(PEEPDIR)/jooslib.jar;." Benchmark < in1
