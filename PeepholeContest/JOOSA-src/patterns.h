@@ -1278,12 +1278,30 @@ OPTI optimization[] = {
     put_and_get,
     dup_duplicate_consts,
     collapse_gotos,
-    super_swap_elimination,
-    remove_nullcheck_concat,
+    // super_swap_elimination,
     eliminate_constant_variable,
     icmp_to_if_right,
-    remove_nullcheck_concat
+    remove_nullcheck_concat,
     /* eliminate_constant_variable // doesn't do anything */
     /* remove_swaps_in_field_init, // broken */
     /* refactor_branch, // broken */
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
+    nothing,
 };
