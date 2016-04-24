@@ -1,4 +1,10 @@
 /*
+ * Group 04
+ * Jacob Errington (260636023)
+ * Frederic Lafrance (260580705)
+ */
+
+/*
  * JOOS is Copyright (C) 1997 Laurie Hendren & Michael I. Schwartzbach
  *
  * Reproduction of all or part of this software is permitted for
